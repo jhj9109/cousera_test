@@ -1,0 +1,11 @@
+{
+  "original": "data/lexicons/ko/SentiWord_info.json",
+  "original_sha256": "c493a972c71893401171014ae19e3cd6d94843fb4c94498c70df4a16ccf6bde1",
+  "selection_csv": "data/outputs/sentiment_vocab/reviewed/selected_domain_sentiment.csv",
+  "selection_csv_sha256": "38d62813f04f9fbea797bd64c4302c630d1fd5cbc0c4b0c581046fe39db78294",
+  "original_entry_count": 14843,
+  "custom_entry_count": 51,
+  "extended_entry_count": 14894,
+  "score_policy": "-2,-1,1,2; human approved",
+  "normalization": "Okt norm=True, stem=True; word_root copies stem token; downstream matching required"
+}

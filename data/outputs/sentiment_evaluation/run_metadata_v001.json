@@ -1,0 +1,41 @@
+{
+  "original_lexicon": "data/lexicons/ko/SentiWord_info.json",
+  "original_sha256": "c493a972c71893401171014ae19e3cd6d94843fb4c94498c70df4a16ccf6bde1",
+  "extended_lexicon": "data/lexicons/ko/derived/SentiWord_info_extended_v001.json",
+  "extended_sha256": "6b48c38cc0e2d3b325ee4ff04439868943cbd690d30bd11a0229c15c7eba1076",
+  "custom_pos_csv": "data/lexicons/ko/derived/custom_entries_v001.csv",
+  "custom_csv_sha256": "695fc2188ba1f0fa7b3934bd6eac7c98a4d2b22f95d4c540e532b82c92aee455",
+  "test_dataset": "data/datasets/nsmc/ratings_test.txt",
+  "test_sha256": "8ac9f64052f11dbf6ae0acb5e038f03d90a76f0eda7820cfb3a92d02edfcebda",
+  "test_rows_per_class": 500,
+  "random_state": 42,
+  "evaluation_n": 1000,
+  "scoring": "Okt norm=True stem=True; longest match; sum; optional simple negation/intensifier rules",
+  "binary_threshold": 0,
+  "zero_score_tie_policy": "predict negative (0); zero rate separately reported",
+  "lexicon_index": {
+    "original_records": 14843,
+    "custom_records": 51,
+    "custom_pos_hints": 51,
+    "base_patterns": 11812,
+    "extended_patterns": 11863,
+    "base_normalization_collisions": 2845,
+    "extended_normalization_collisions": 2845,
+    "cache_path": "/Users/jhj91_093395/Documents/4-2/data/outputs/sentiment_evaluation/cache/okt_lexicon_index_17d2e18be9dfa6a0.json",
+    "cache_reused": false,
+    "signature": {
+      "schema": 2,
+      "original_sha256": "c493a972c71893401171014ae19e3cd6d94843fb4c94498c70df4a16ccf6bde1",
+      "extended_sha256": "6b48c38cc0e2d3b325ee4ff04439868943cbd690d30bd11a0229c15c7eba1076",
+      "custom_csv_sha256": "695fc2188ba1f0fa7b3934bd6eac7c98a4d2b22f95d4c540e532b82c92aee455",
+      "konlpy_version": "0.6.0",
+      "normalization": "Okt norm=True stem=True POS-aware; longest-first; custom override"
+    }
+  },
+  "model_configs": [
+    "knu_plain",
+    "knu_rules",
+    "extended_plain",
+    "extended_rules"
+  ]
+}
