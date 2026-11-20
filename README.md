@@ -26,6 +26,7 @@ python -m unittest discover -s tests   # 회귀 테스트
 | 감성 분석 | [05 성능 및 판정 변화](notebooks/05_korean_sentiment_scoring_evaluation.ipynb) · [06 문장별 시연](notebooks/06_sentence_sentiment_trace.ipynb) · [점수 계산과 중립 처리](docs/감성점수.md) |
 | 정보 추출 | [07 정밀도·재현율 및 실패 사례](notebooks/07_information_extraction_evaluation.ipynb) · [정규식 판독 예시](docs/정보추출_정규표현식.md) |
 | 설계 설명 | [모듈 분리·확장·회귀 검증과 접근법 비교](docs/규칙기반_NLP_고찰.md) |
+| 정밀도·재현율 | [감성사전·문맥 규칙의 효과와 정보 유형별 추출 성능](docs/규칙기반_정밀도와_재현율.md) |
 
 ## 1. 분석 자료
 
