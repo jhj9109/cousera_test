@@ -11,14 +11,14 @@
 | 영화가 재미없진 않아 | ‘재미없다’ −1점에 ‘않다’가 부정 규칙 적용 | +1 |
 | 영화가 재미없는 건 아니야 | ‘재미없다’ −1점과 ‘아니다’ −2점을 별도 항목으로 합산 | −3 |
 
-- **설명력** — 의미가 비슷한 두 문장의 판정 차이를 매칭 항목과 부정 횟수로 추적. [감성 점수 계산 코드](src/korean_sentiment.py)
+- **설명력** — 의미가 비슷한 두 문장의 판정 차이를 매칭 항목과 부정 횟수로 추적. [감성 점수 계산 코드](../src/korean_sentiment.py)
 - **유지보수 비용** — ‘아니다’를 부정어로 추가할 때 기존 사전 점수와의 중복 적용까지 검토
 - **사전 확장 효과** — 영화 표현 51개 추가 후 동일 규칙으로 NSMC 테스트 리뷰 1,000건 평가. 정확도 **68.2% → 70.2%**
-- **회귀 사례** — 기존 오답 27건 개선, 기존 정답 7건 악화. 새 규칙이 해결한 문장과 새로 틀린 문장을 함께 확인. [평가 노트북](notebooks/05_korean_sentiment_scoring_evaluation.ipynb) · [리뷰별 판정 변화](data/outputs/sentiment_evaluation/review_scores_v001.csv)
+- **회귀 사례** — 기존 오답 27건 개선, 기존 정답 7건 악화. 새 규칙이 해결한 문장과 새로 틀린 문장을 함께 확인. [평가 노트북](../notebooks/05_korean_sentiment_scoring_evaluation.ipynb) · [리뷰별 판정 변화](../data/outputs/sentiment_evaluation/review_scores_v001.csv)
 
 ## 정보 추출의 정밀도와 재현율
 
-- **평가 표본** — 9개 유형 × 12문장 = 108문장. [07 평가 결과와 실패 원문](notebooks/07_information_extraction_evaluation.ipynb)
+- **평가 표본** — 9개 유형 × 12문장 = 108문장. [07 평가 결과와 실패 원문](../notebooks/07_information_extraction_evaluation.ipynb)
 - **정탐(TP)** — 예측 유형과 원문 시작·끝 위치가 정답과 모두 일치
 - **정밀도** — 추출 구간 중 정답 비율 `TP / (TP + FP)`
 - **재현율** — 정답 구간 중 추출 성공 비율 `TP / (TP + FN)`
@@ -39,8 +39,8 @@
 | 정보 추출 | 원문의 문자 구간과 정규식 후보 | 유형별 정규화·마스킹 값. 파이썬 표준 라이브러리로 독립 실행 |
 
 - **분리 이유** — 입력 단위·출력 목적·실행 환경이 달라 각 모듈을 독립적으로 실행·검증
-- **정보 유형 추가** — `PATTERNS`에 유형명·정규식 등록 → `InformationNormalizer.normalize_<유형>` 정의 → 민감 유형은 `SENSITIVE_TYPES` 등록 및 `PrivacyMasker.mask_<유형>` 추가. 유형명을 기준으로 함수 연결. [추출기 구현](src/information_extractor.py)
-- **감성어 추가** — 학습 리뷰 빈도·용례 검토 → 단어·품사·점수·선정 이유 기록 → 04에서 확장 사전 새 버전 생성. 05의 비교 버전은 `LEXICON_VERSION`, 독립 시연은 `load_assignment_lexicon()`의 v001 사용. [04 사전 검토](notebooks/04_korean_domain_lexicon_review_ui.ipynb) · [사전 로더](src/korean_sentiment.py)
+- **정보 유형 추가** — `PATTERNS`에 유형명·정규식 등록 → `InformationNormalizer.normalize_<유형>` 정의 → 민감 유형은 `SENSITIVE_TYPES` 등록 및 `PrivacyMasker.mask_<유형>` 추가. 유형명을 기준으로 함수 연결. [추출기 구현](../src/information_extractor.py)
+- **감성어 추가** — 학습 리뷰 빈도·용례 검토 → 단어·품사·점수·선정 이유 기록 → 04에서 확장 사전 새 버전 생성. 05의 비교 버전은 `LEXICON_VERSION`, 독립 시연은 `load_assignment_lexicon()`의 v001 사용. [04 사전 검토](../notebooks/04_korean_domain_lexicon_review_ui.ipynb) · [사전 로더](../src/korean_sentiment.py)
 - **회귀 검증** — 같은 테스트·표본으로 변경 전후 비교. 07은 ID별 오탐·미탐, 05는 리뷰 ID별 예측, 06은 표현별 점수 확인. 개선·악화 사례를 기록하고 원인을 확인한 예문은 기대값과 함께 단위 테스트에 추가
 
 ## 접근법의 선택 기준
