@@ -171,50 +171,45 @@ class LexiconIndex:
                 collisions += 1
                 continue  # 원본 내 중복 정규화 키는 먼저 나온 것을 유지한다.
             chosen[entry.keys] = entry
-        for record in additions:
-            word = str(record["word"])
-            entry = _make_entry(record, tokenizer, "custom", (custom_pos or {}).get(word))
-            if entry is None:
-                continue
-            if entry.keys in chosen:
-                collisions += 1
-            chosen[entry.keys] = entry  # 확장판에서는 승인된 신규 항목 우선.
-        return cls(list(chosen.values()), collisions)
+        return cls._merge_additions(chosen, collisions, additions, tokenizer, custom_pos)
 
     def with_additions(self, additions: list[dict], tokenizer: Any,
                        custom_pos: dict[str, str] | None = None) -> "LexiconIndex":
         """이미 생성한 원본 색인을 재사용해 신규 항목만 토큰화한다."""
         chosen = {entry.keys: entry for entry in self.entries}
-        collisions = self.collisions
+        return self._merge_additions(chosen, self.collisions, additions, tokenizer, custom_pos)
+
+    @classmethod
+    def _merge_additions(cls, chosen: dict[tuple[tuple[str, str], ...], Entry],
+                         collisions: int, additions: list[dict], tokenizer: Any,
+                         custom_pos: dict[str, str] | None) -> "LexiconIndex":
+        pos_by_word = custom_pos or {}
         for record in additions:
             word = str(record["word"])
-            entry = _make_entry(record, tokenizer, "custom", (custom_pos or {}).get(word))
+            entry = _make_entry(record, tokenizer, "custom", pos_by_word.get(word))
             if entry is None:
                 continue
             if entry.keys in chosen:
                 collisions += 1
             chosen[entry.keys] = entry  # 승인한 신규 항목 우선
-        return LexiconIndex(list(chosen.values()), collisions)
+        return cls(list(chosen.values()), collisions)
 
     def match(self, tokens: Sequence[Token]) -> list[dict[str, Any]]:
         """토큰을 왼쪽부터 탐색해 최장 패턴 우선 매칭 (중복 점수화 방지)."""
-        result = []
-        token_keys = [t.key for t in tokens]
-        i = 0
-        while i < len(tokens):
-            found = None
-            for candidate in self.by_first.get(token_keys[i], []):
-                k = len(candidate.keys)
-                if tuple(token_keys[i:i+k]) == candidate.keys:
-                    found = candidate
+        matches = []
+        token_keys = [token.key for token in tokens]
+        start = 0
+        while start < len(tokens):
+            # 같은 토큰으로 시작하는 후보는 색인을 만들 때 이미 긴 순서로 정렬했다.
+            for candidate in self.by_first.get(token_keys[start], []):
+                end = start + len(candidate.keys)
+                if tuple(token_keys[start:end]) == candidate.keys:
+                    matches.append({"start": start, "end": end, "entry": candidate})
+                    start = end
                     break
-            if found is None:
-                i += 1
-                continue
-            end = i + len(found.keys)
-            result.append({"start": i, "end": end, "entry": found})
-            i = end
-        return result
+            else:
+                start += 1
+        return matches
 
     def to_json(self) -> dict[str, Any]:
         return {"schema": LEXICON_INDEX_SCHEMA, "collisions": self.collisions,
@@ -246,6 +241,17 @@ def _around(tokens: Sequence[Token], start: int, end: int, window: int,
     return found
 
 
+def _count_negations(matched_tokens: Sequence[Token], before: Sequence[Token],
+                     after: Sequence[Token]) -> int:
+    # 사전 표현 자체에 부정이 들어 있으면 그 의미는 이미 기본 점수에 반영되어 있다.
+    if any(token.form in PREFIX_NEGATORS or token.form in SUFFIX_NEGATORS for token in matched_tokens):
+        return 0
+    # 앞쪽 두 토큰의 '안/못'은 각각 세고, 뒤쪽 세 토큰의 '않다/못하다'는 한 번 센다.
+    prefix_count = sum(token.form in PREFIX_NEGATORS for token in before[:2])
+    has_suffix_negation = any(token.form in SUFFIX_NEGATORS for token in after[:3])
+    return prefix_count + int(has_suffix_negation)
+
+
 class SentimentAnalyzer:
     def __init__(self, lexicon: LexiconIndex, *, use_rules: bool = True):
         self.lexicon = lexicon
@@ -262,25 +268,13 @@ class SentimentAnalyzer:
             right_limit = spans[idx+1][0] if idx+1 < len(spans) else len(tokens)
             before = _around(tokens, start, end, min(3, start-left_limit), reverse=True)
             after = _around(tokens, start, end, min(3, right_limit-end), reverse=False)
-            before_forms = [t.form for t in before]
-            after_forms = [t.form for t in after]
-            within = [t.form for t in tokens[start:end]]
-            embedded_negation = any(x in PREFIX_NEGATORS or x in SUFFIX_NEGATORS for x in within)
-            prefix_count = sum(x in PREFIX_NEGATORS for x in before_forms[:2])
-            # '좋지 않다' 패턴의 '않다' 탐지. (Okt의 분해에 따라 '지'가 독립 토큰일 수도 있음)
-            suffix_count = int(any(x in SUFFIX_NEGATORS for x in after_forms[:3]))
-            negations = 0 if embedded_negation else prefix_count + suffix_count
-            multiplier = 1.0
-            modifier = None
+            negations, modifier, multiplier = 0, None, 1.0
             if self.use_rules:
-                for form in before_forms:
-                    if form in INTENSIFIERS:
-                        modifier = form
-                        multiplier = INTENSIFIERS[form]
-                        break
-                polarity = (-1 if negations % 2 else 1)
-            else:
-                negations, multiplier, modifier, polarity = 0, 1.0, None, 1
+                negations = _count_negations(tokens[start:end], before, after)
+                modifier = next((t.form for t in before if t.form in INTENSIFIERS), None)
+                if modifier is not None:
+                    multiplier = INTENSIFIERS[modifier]
+            polarity = -1 if negations % 2 else 1
             adjusted = entry.score * polarity * multiplier
             hits.append({
                 "term": entry.word, "source": entry.source,
@@ -319,9 +313,6 @@ def build_or_load_indexes(
     extended = load_records(extended_path)
     additions = check_extension(orig, extended)
     pos_hints = read_custom_pos(custom_csv_path, additions)
-    if len(pos_hints) != len(additions):
-        # 오래된/별도 생성 사전일 수 있으므로 실패하지 않고 통계로 알린다.
-        pass
     import konlpy
     sig = {
         "schema": LEXICON_INDEX_SCHEMA,
@@ -360,3 +351,64 @@ def build_or_load_indexes(
              "cache_path": str(cache_path), "cache_reused": reused,
              "signature": sig}
     return base_index, extended_index, stats
+
+
+def load_assignment_lexicon(tokenizer: OktTokenizer) -> LexiconIndex:
+    """4단계 과제에서 저장한 v001 확장 사전과 품사 기록으로 검색 색인을 만든다."""
+    project_root = Path(__file__).resolve().parents[1]
+    lexicon_dir = project_root / "data" / "lexicons" / "ko" / "derived"
+    records = load_records(lexicon_dir / "SentiWord_info_extended_v001.json")
+    metadata = json.loads((lexicon_dir / "metadata_v001.json").read_text(encoding="utf-8"))
+
+    # 확장 JSON은 KNU 원본 뒤에 검토한 표현을 덧붙인 파일이다.
+    # 생성 당시 기록한 개수로 둘을 나누면 각 점수의 출처도 설명할 수 있다.
+    original_count = metadata["original_entry_count"]
+    if not 0 <= original_count <= len(records) or len(records) - original_count != metadata["custom_entry_count"]:
+        raise ValueError("확장 사전의 항목 수가 v001 메타데이터와 일치하지 않습니다.")
+    original_records = records[:original_count]
+    custom_records = records[original_count:]
+    custom_pos = read_custom_pos(lexicon_dir / "custom_entries_v001.csv", custom_records)
+    return LexiconIndex.build(original_records, custom_records, tokenizer, custom_pos)
+
+
+def print_review_analysis(review: str, tokens: Sequence[Token], analysis: dict[str, Any]) -> None:
+    """각 표현의 기본 점수가 최종 합계에 얼마나 기여했는지 보여준다."""
+    print(f"리뷰: {review}")
+    print("형태소/품사:", " ".join(f"{token.form}/{token.pos}" for token in tokens))
+    for hit in analysis["hits"]:
+        source = "과제 추가" if hit["source"] == "custom" else "KNU 원본"
+        sign = -1 if hit["negation_count"] % 2 else 1
+        print(f"  {hit['term']} ({source}): 기본 {hit['base_score']:+d}"
+              f" × 부정 계수 {sign} (부정 {hit['negation_count']}회)"
+              f" × 강도 {hit['multiplier']:g} ({hit['modifier'] or '강조어 없음'})"
+              f" = {hit['adjusted_score']:+g}")
+    if not analysis["hits"]:
+        print("  사전에서 일치하는 감성 표현을 찾지 못했습니다.")
+    print(f"리뷰 감성 점수: {analysis['score']:+g}")
+
+
+def main() -> None:
+    """영화 리뷰 한 문장으로 과제의 감성사전과 점수 계산 과정을 시연한다."""
+    # 1. 감성사전을 준비한다. 사전에서 ‘명작’은 과제에서 추가한 명사이고 점수는 +2다.
+    #    이처럼 (형태소, 품사)의 조합으로 표현을 찾을 수 있도록 사전 항목을 색인한다.
+    tokenizer = OktTokenizer()
+    sentiment_lexicon = load_assignment_lexicon(tokenizer)
+
+    # 2. 리뷰도 사전과 같은 Okt 설정으로 분석한다. 예를 들어 ‘뻔했어요’처럼 활용된
+    #    표현도 기본형으로 바뀌므로 사전에 등록한 ‘뻔하다’와 비교할 수 있다.
+    example_review = "정말 명작! 전개는 조금 뻔했어요."
+    review_tokens = tokenizer.tokenize(example_review)
+
+    # 3. 왼쪽부터 사전 표현을 찾는다. 같은 위치에서 여러 표현이 맞으면 가장 긴 것
+    #    하나를 선택한다. 이어서 주변 부정어로 부호를, 강조어로 점수 크기를 조정한다.
+    #    예를 들어 ‘정말’이 ‘명작’을 수식하면 +2 × 1.5로 +3점이 된다.
+    sentiment_analyzer = SentimentAnalyzer(sentiment_lexicon, use_rules=True)
+    review_analysis = sentiment_analyzer.score_tokens(review_tokens)
+
+    # 4. 어떤 표현에서 몇 점이 나왔는지 확인한 뒤 합계를 읽는다.
+    #    합계가 0이면 일치한 표현이 없었는지, 양수와 음수가 상쇄됐는지 내역으로 구별한다.
+    print_review_analysis(example_review, review_tokens, review_analysis)
+
+
+if __name__ == "__main__":
+    main()
