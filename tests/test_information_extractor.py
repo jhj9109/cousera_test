@@ -161,6 +161,15 @@ class TestRegexInformationExtractor(unittest.TestCase):
             "https://example.com/path?api_key=********&query=hello"
         ])
 
+    def test_unsupported_fraction_does_not_return_a_partial_amount(self):
+        result = self.extractor.extract("예산 1.5억원, 수수료 $12.345, 운임 5000원.")
+        self.assertEqual(result["money"], ["5000"])
+
+    def test_email_in_url_respects_mask_option(self):
+        url = "https://example.org/?email=demo@example.org"
+        self.assertEqual(self.extractor.extract(url)["url"], ["https://example.org/?email=d***@example.org"])
+        self.assertEqual(self.extractor.extract(url, mask=False)["url"], [url])
+
     def test_api_key_inside_url_is_masked(self):
         text = (
             "https://example.com/callback"
