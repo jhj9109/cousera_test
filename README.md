@@ -1,4 +1,4 @@
-# 영화 리뷰 감성사전 구축과 평가
+# 규칙 기반 감성 분석과 정보 추출
 
 ## 설치 및 실행
 
@@ -7,10 +7,20 @@
 ```bash
 python3.12 codyssey_4_2_nlp_environment.py
 source data/activate.sh
-python src/korean_sentiment.py
+python src/korean_sentiment.py         # 영화 리뷰의 감성 점수와 계산 근거
+python src/information_extractor.py    # 샘플 문장의 정규화·마스킹 결과
+python -m unittest discover -s tests   # 회귀 테스트
 ```
 
-첫 번째 명령은 가상환경, JDK, Python 패키지, 분석용 사전과 데이터셋을 준비하고 설치 상태를 검증한다. 두 번째 명령은 현재 셸에 실행 환경을 적용한다. 세 번째 명령은 예시 리뷰의 감성 점수를 출력한다. 노트북 실행 시 프로젝트의 `.venv/bin/python`을 커널로 선택한다. [Python 패키지 버전](requirements.txt)
+첫 번째 명령은 가상환경, JDK, Python 패키지, 분석용 사전과 데이터셋을 준비하고 설치 상태를 검증한다. 두 번째 명령은 현재 셸에 실행 환경을 적용한다. 노트북 실행 시 프로젝트의 `.venv/bin/python`을 커널로 선택한다. [Python 패키지 버전](requirements.txt)
+
+정보 추출기에 직접 문장을 전달하려면 `python src/information_extractor.py "일시 2024/3/15, 참가비 50,000원."`을 실행한다. 기대 결과는 날짜 `2024-03-15`와 금액 `50000`이다. 개인정보는 기본적으로 마스킹하며, 예시 입력의 정규화 결과만 확인할 때는 `--no-mask`를 사용한다.
+
+| 평가 대상 | 확인 위치 |
+|---|---|
+| 감성 분석 | [05 성능 및 판정 변화](notebooks/05_korean_sentiment_scoring_evaluation.ipynb) · [06 문장별 시연](notebooks/06_sentence_sentiment_trace.ipynb) · [점수 계산과 중립 처리](감성점수.md) |
+| 정보 추출 | [07 정밀도·재현율 및 실패 사례](notebooks/07_information_extraction_evaluation.ipynb) · [정규식 판독 예시](정보추출_정규표현식.md) |
+| 설계 설명 | [모듈 분리·확장·회귀 검증과 접근법 비교](규칙기반_NLP_고찰.md) |
 
 ## 1. 분석 자료
 
