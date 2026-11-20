@@ -2,12 +2,13 @@
 
 - 원래 5개 유형: email, phone, date, money, url
 - 보너스 4개 유형: rrn(주민번호), card, address, api_key
-- 정규화 -> 민감정보 마스킹 -> 반환
+- 정규화 -> 민감정보 마스킹(기본값) -> 반환
 - 카드/주소/API Key는 목적에 맞게 인식 범위를 제한하며 만능 검증기가 아님
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -324,17 +325,42 @@ class RegexInformationExtractor:
             for kind in self.SENSITIVE_TYPES
         }
 
-    def extract(self, text: str) -> dict[str, list[str]]:
-        """정규화 및 마스킹된 결과만 반환하며 원본 민감정보는 반환하지 않음."""
+    def extract(self, text: str, *, mask: bool = True) -> dict[str, list[str]]:
+        """기본적으로 민감정보를 마스킹한다. mask=False이면 정규화된 값을 그대로 반환한다."""
         result = {kind: [] for kind in self.PATTERNS}
         for kind, pattern in self.PATTERNS.items():
             for match in pattern.finditer(text):
                 try:
                     normalized = self._normalizers[kind](match.group())
-                    if kind in self._maskers:
+                    if mask and kind in self._maskers:
                         normalized = self._maskers[kind](normalized)
                 except (ValueError, OverflowError):
                     # 형식은 닮았지만 해석할 수 없는 후보는 제외
                     continue
                 result[kind].append(normalized)
         return result
+
+
+def main() -> None:
+    sample_text = (
+        "문의: support@company.co.kr, 전화 02-1234-5678\n"
+        "일시: 2024년 3월 15일, 참가비: 50,000원"
+    )
+    parser = argparse.ArgumentParser(description="입력 문장에서 정보를 추출해 유형별로 출력합니다.")
+    parser.add_argument("text", nargs="?", default=sample_text,
+                        help="분석할 문장. 생략하면 샘플 문장을 사용합니다.")
+    parser.add_argument("--no-mask", dest="mask", action="store_false",
+                        help="민감정보를 마스킹하지 않고 정규화된 값을 출력합니다.")
+    args = parser.parse_args()
+
+    result = RegexInformationExtractor().extract(args.text, mask=args.mask)
+    if not any(result.values()):
+        print("추출된 정보가 없습니다.")
+        return
+    for kind, values in result.items():
+        if values:
+            print(f"{kind}: {', '.join(values)}")
+
+
+if __name__ == "__main__":
+    main()
