@@ -28,13 +28,13 @@ python -m unittest discover -s tests   # 회귀 테스트
 | 설계 설명 | [모듈 분리·확장·회귀 검증과 접근법 비교](docs/규칙기반_NLP_고찰.md) |
 | 정밀도·재현율 | [감성사전·문맥 규칙의 효과와 정보 유형별 추출 성능](docs/규칙기반_정밀도와_재현율.md) |
 
-## 1. 분석 자료
+## 1. 분석 자료와 출처
 
-| 자료·도구 | 용도 |
-|---|---|
-| KNU 한국어 감성사전 | 표현 14,843개와 항목별 감성 점수(−2~+2)를 제공하는 기준 사전 |
-| 네이버 영화 리뷰(NSMC) | 학습 데이터 15만 건은 감성어 후보 탐색에 사용하고, 테스트 데이터 5만 건 중 1,000건은 최종 평가에 사용 |
-| KoNLPy Okt | 리뷰를 형태소와 품사로 분리하고 활용형을 기본형으로 변환 |
+| 자료·도구 | 과제에서의 용도 | 출처 |
+|---|---|---|
+| KNU 한국어 감성사전 | `SentiWord_info.json`의 표현 14,843개와 감성 점수(−2~+2)를 확장 사전의 기준으로 사용 | [KNU 감성사전 배포 저장소](https://github.com/park1200656/knu_senti_dict) |
+| 네이버 영화 리뷰(NSMC) | 학습 데이터 15만 건에서 감성어 후보 탐색. 테스트 데이터 5만 건 중 1,000건으로 최종 평가 | [Naver Sentiment Movie Corpus](https://github.com/e9t/nsmc) |
+| KoNLPy Okt | 리뷰를 형태소·품사로 분리하고 활용형을 기본형으로 변환 | [KoNLPy 공식 문서의 Okt 항목](https://konlpy.org/ko/latest/api/konlpy.tag/#okt-class) |
 
 [01 분석 자료 및 도구 탐색](notebooks/01_nlp_resources_exploration.ipynb)
 
