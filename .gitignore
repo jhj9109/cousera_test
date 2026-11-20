@@ -4,3 +4,6 @@ venv/
 .tmp/
 
 .DS_Store
+
+data/
+*.pyc

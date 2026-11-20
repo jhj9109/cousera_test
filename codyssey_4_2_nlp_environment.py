@@ -52,6 +52,7 @@ NSMC_FILES = {
 }
 NLTK_PACKAGES = ("vader_lexicon", "punkt_tab", "wordnet", "movie_reviews")
 PACKAGE_VERSIONS = {"konlpy": "0.6.0", "JPype1": "1.6.0", "nltk": "3.9.2"}
+NOTEBOOK_PACKAGES = {"pandas": "2.3.3", "ipykernel": "6.30.1"}
 
 
 def log(message: str) -> None:
@@ -356,7 +357,8 @@ class PythonVirtualEnv(SetupTarget):
             return
         if self.ctx.venv_dir.exists():
             raise RuntimeError(f"Incomplete Python environment: {self.ctx.venv_dir}; remove and retry")
-        venv.EnvBuilder(with_pip=True, symlinks=False).create(self.ctx.venv_dir)
+        # Relocatable host Pythons (e.g. uv) find their runtime relative to the executable.
+        venv.EnvBuilder(with_pip=True, symlinks=True).create(self.ctx.venv_dir)
 
     def check(self) -> None:
         py = self.ctx.python
@@ -391,7 +393,7 @@ from importlib.metadata import version
 from konlpy.tag import Okt
 assert version('konlpy') == '0.6.0'
 assert version('JPype1') == '1.6.0'
-result = Okt().pos('영화가 정말 재미있어요')
+result = Okt().pos('영화가 정말 재미있어요', norm=True, stem=True)
 assert result and any(tag.startswith('N') for _, tag in result)
 print('Okt:', result)
 '''
@@ -399,6 +401,29 @@ print('Okt:', result)
 
     def brief_env(self) -> str:
         return "KoNLPy 0.6.0 + JPype1 1.6.0 in root .venv; Okt requires JAVA_HOME."
+
+
+class NotebookRuntime(SetupTarget):
+    name = "Assignment notebook kernel"
+
+    def install(self) -> None:
+        self.ctx.run_python(
+            "-m", "pip", "install", "--disable-pip-version-check", "--only-binary=:all:",
+            *(f"{name}=={version}" for name, version in NOTEBOOK_PACKAGES.items()),
+        )
+
+    def check(self) -> None:
+        self.ctx.run_python("-c", """
+import ipykernel
+import pandas as pd
+import numpy as np
+from IPython.display import display
+assert pd.Series(np.array([1, -1])).sum() == 0
+print('Notebook kernel:', ipykernel.__version__, 'pandas:', pd.__version__)
+""")
+
+    def brief_env(self) -> str:
+        return "Select .venv/bin/python as the notebook kernel after sourcing data/activate.sh."
 
 
 class NLTK(SetupTarget):
@@ -612,6 +637,7 @@ def build_master(ctx: Context) -> Master:
             .add(Java(ctx))
             .add(PythonVirtualEnv(ctx))
             .add(KoNLPy(ctx))
+            .add(NotebookRuntime(ctx))
             .add(NLTK(ctx))
             .add(KNULexicon(ctx))
             .add(NSMCDataset(ctx))
@@ -627,7 +653,7 @@ def write_manifest(ctx: Context) -> None:
         "java_major": ctx.jdk_version,
         "java_mode": "local" if ctx.java_local else "system",
         "java_home": str(ctx.java_home),
-        "python_packages": PACKAGE_VERSIONS,
+        "python_packages": {**PACKAGE_VERSIONS, **NOTEBOOK_PACKAGES},
         "nltk_packages": list(NLTK_PACKAGES),
         "sources": {"KNU": KNU_URL, **{k: v[1] for k, v in NSMC_FILES.items()}},
         "sha256": {

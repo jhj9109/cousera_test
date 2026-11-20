@@ -1,0 +1,11 @@
+# Python 3.12에서 검증한 과제용 패키지
+# JDK, 사전, 데이터셋을 포함한 전체 환경 구성은 codyssey_4_2_nlp_environment.py를 실행한다.
+
+# 한국어 형태소 분석과 영어 감성 분석
+konlpy==0.6.0
+JPype1==1.6.0
+nltk==3.9.2
+
+# 리뷰 데이터 분석과 Jupyter 커널
+pandas==2.3.3
+ipykernel==6.30.1
